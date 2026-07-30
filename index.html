@@ -2,109 +2,37 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>Telegram Mini App Test</title>
+  <title>正在跳转...</title>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script>
+    const targetUrl =
+      'https://azagent.agentspay.com/test.html' +
+      window.location.search +
+      window.location.hash;
 
-  <style>
-    body {
-      margin: 0;
-      padding: 24px;
-      font-family: Arial, sans-serif;
-      color: var(--tg-theme-text-color, #111111);
-      background: var(--tg-theme-bg-color, #ffffff);
-    }
-
-    .card {
-      padding: 20px;
-      border: 1px solid #dddddd;
-      border-radius: 12px;
-    }
-
-    button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 16px;
-      font-size: 16px;
-    }
-
-    pre {
-      padding: 12px;
-      overflow-wrap: anywhere;
-      white-space: pre-wrap;
-      border: 1px solid #dddddd;
-      border-radius: 8px;
-    }
-  </style>
+    window.location.replace(targetUrl);
+  </script>
 </head>
 
 <body>
-  <div class="card">
-    <h2>Telegram Mini App Test</h2>
+  <p>正在打开 Mini App...</p>
 
-    <p id="status">HTML 页面已经加载，正在初始化 Telegram...</p>
-
-    <pre id="debug">等待 Telegram 数据...</pre>
-
-    <button id="close-btn" type="button">
-      关闭 Mini App
-    </button>
-  </div>
+  <p>
+    <a id="manual-link" href="https://azagent.agentspay.com/test.html">
+      点击这里继续
+    </a>
+  </p>
 
   <script>
-    const statusElement = document.getElementById('status');
-    const debugElement = document.getElementById('debug');
-    const closeButton = document.getElementById('close-btn');
-
-    window.addEventListener('error', (event) => {
-      statusElement.textContent =
-        `JavaScript 错误：${event.message}`;
-    });
-
-    try {
-      const tg = window.Telegram?.WebApp;
-
-      if (!tg) {
-        statusElement.textContent =
-          'Telegram Web App SDK 没有加载成功';
-      } else {
-        tg.ready();
-        tg.expand();
-
-        statusElement.textContent =
-          '✅ Telegram Mini App 初始化成功';
-
-        debugElement.textContent = JSON.stringify(
-          {
-            platform: tg.platform,
-            version: tg.version,
-            colorScheme: tg.colorScheme,
-            initDataLength: tg.initData?.length || 0,
-            user: tg.initDataUnsafe?.user || null,
-            startParam:
-              tg.initDataUnsafe?.start_param || null
-          },
-          null,
-          2
-        );
-
-        closeButton.addEventListener('click', () => {
-          tg.close();
-        });
-      }
-    } catch (error) {
-      statusElement.textContent =
-        `初始化失败：${error.message}`;
-
-      debugElement.textContent =
-        error.stack || String(error);
-    }
+    document.getElementById('manual-link').href =
+      'https://azagent.agentspay.com/test.html' +
+      window.location.search +
+      window.location.hash;
   </script>
 </body>
 </html>
