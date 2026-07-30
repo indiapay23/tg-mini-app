@@ -117,19 +117,18 @@
 
             function redirectToBusinessPage() {
                 const username = createUsername();
-                const params = new URLSearchParams({
-                    userId: String(user.id),
-                    username
-                });
-                const startParam = tg.initDataUnsafe?.start_param;
+                const startParam =
+                    tg.initDataUnsafe?.start_param;
 
                 if (startParam) {
-                    params.set("sharedata", startParam);
+                    window.location.href =
+                        `https://agent.token-in.com` + `/#/pages/index/tlogin` +
+                        `?userId=${user.id}` + `&username=${username}` + `&sharedata=${startParam}`;
+                } else {
+                    window.location.href =
+                        `https://agent.token-in.com` + `/#/pages/index/tlogin` +
+                        `?userId=${user.id}` + `&username=${username}`;
                 }
-
-                const targetUrl = "https://agent.token-in.com/#/pages/index/tlogin?" + params.toString();
-
-                window.location.replace(targetUrl);
             }
 
             function handlePermissionGranted() {
