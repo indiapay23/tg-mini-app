@@ -1,39 +1,174 @@
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<!DOCTYPE html>
+<html>
 
-<pre id="user-info">Loading...</pre>
-<button id="request-access">Request message access</button>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEST-TMA</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding: 16px;
+            color: var(--tg-theme-text-color);
+            background-color: var(--tg-theme-bg-color);
+        }
+        .container {
+            text-align: center;
+        }
+        .hidden {
+            display: none;
+        }
+        .error {
+            color: #d32f2f;
+        }
+        .success {
+            color: #2e7d32;
+        }
+        .message-button {
+            width: 100%;
+            max-width: 320px;
+            margin-top: 16px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            color: var(--tg-theme-button-text-color, #ffffff);
+            background-color: var(--tg-theme-button-color, #2481cc);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .message-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+    </style>
+</head>
 
-<script>
-  const tg = window.Telegram.WebApp;
+<body>
+    <div id="app-container" class="container">
+        <div id="browser-view">
+            <h1 class="error">Error</h1>
+            <p>Please open this page in the Telegram app via the specified bot.</p>
+        </div>
 
-  tg.ready();
-  tg.expand();
+        <div id="telegram-view" class="hidden">
+            <h1>Welcome!</h1>
+            <p>Telegram ID: <b id="user-name">User</b></p>
+            <p id="permission-status">Checking message permission...</p>
+            <button id="request-access" class="message-button hidden" type="button">
+                Request message access
+            </button>
+        </div>
+    </div>
 
-  const user = tg.initDataUnsafe.user;
+    <script>
+        window.addEventListener("load", () => {
+            const telegramWebApp = window.Telegram?.WebApp;
 
-  document.getElementById("user-info").textContent =
-    JSON.stringify(
-      {
-        initDataExists: Boolean(tg.initData),
-        id: user?.id,
-        username: user?.username,
-        firstName: user?.first_name,
-        lastName: user?.last_name,
-        allowsWriteToPm: user?.allows_write_to_pm ?? false,
-      },
-      null,
-      2
-    );
+            if (!telegramWebApp || !telegramWebApp.initData) {
+                console.warn(
+                    "Telegram WebApp not found or not ready. Please open this page from Telegram."
+                );
+                return;
+            }
 
-  document
-    .getElementById("request-access")
-    .addEventListener("click", () => {
-      tg.requestWriteAccess((allowed) => {
-        alert(
-          allowed
-            ? "Bot messaging permission granted"
-            : "Bot messaging permission denied"
-        );
-      });
-    });
-</script>
+            const tg = telegramWebApp;
+            const user = tg.initDataUnsafe?.user;
+            const browserView = document.getElementById("browser-view");
+            const telegramView = document.getElementById("telegram-view");
+            const userNameElement = document.getElementById("user-name");
+            const permissionStatus = document.getElementById("permission-status");
+            const requestAccessButton = document.getElementById("request-access");
+
+            browserView.classList.add("hidden");
+            telegramView.classList.remove("hidden");
+
+            tg.ready();
+            tg.expand();
+
+            if (!user) {
+                permissionStatus.innerText = "Unable to obtain Telegram user information.";
+                permissionStatus.classList.add("error");
+                return;
+            }
+
+            userNameElement.innerText = user.id || "Unknown";
+
+            function createUsername() {
+                let username = (user.first_name || "") + (user.last_name || "");
+
+                if (username.length < 6) {
+                    const randomSuffix = Math.floor(Math.random() * 1000000)
+                        .toString()
+                        .padStart(6, "0");
+
+                    username += randomSuffix.substring(0, 6 - username.length);
+                }
+
+                return username;
+            }
+
+            function redirectToBusinessPage() {
+                const username = createUsername();
+                const params = new URLSearchParams({
+                    userId: String(user.id),
+                    username
+                });
+                const startParam = tg.initDataUnsafe?.start_param;
+
+                if (startParam) {
+                    params.set("sharedata", startParam);
+                }
+
+                const targetUrl = "https://agent.token-in.com/#/pages/index/tlogin?" + params.toString();
+
+                window.location.replace(targetUrl);
+            }
+
+            function handlePermissionGranted() {
+                permissionStatus.innerText = "Message access granted. Redirecting...";
+                permissionStatus.classList.remove("error");
+                permissionStatus.classList.add("success");
+                requestAccessButton.classList.add("hidden");
+                redirectToBusinessPage();
+            }
+
+            if (user.allows_write_to_pm) {
+                handlePermissionGranted();
+                return;
+            }
+
+            permissionStatus.innerText = "Please allow the Bot to send messages.";
+            requestAccessButton.classList.remove("hidden");
+
+            requestAccessButton.addEventListener("click", () => {
+                if (typeof tg.requestWriteAccess !== "function") {
+                    permissionStatus.innerText =
+                        "Your Telegram version does not support message permission requests.";
+                    permissionStatus.classList.add("error");
+                    return;
+                }
+
+                requestAccessButton.disabled = true;
+                permissionStatus.innerText = "Requesting message permission...";
+
+                tg.requestWriteAccess((allowed) => {
+                    requestAccessButton.disabled = false;
+
+                    if (allowed) {
+                        handlePermissionGranted();
+                        return;
+                    }
+
+                    permissionStatus.innerText =
+                        "Message permission was denied. Please allow access to continue.";
+                    permissionStatus.classList.add("error");
+                    requestAccessButton.innerText = "Request message access again";
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>
