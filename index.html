@@ -1,99 +1,179 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TEST-TMA</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          Helvetica, Arial, sans-serif;
-        padding: 16px;
-        color: var(--tg-theme-text-color); /* 使用Telegram主题变量 */
-        background-color: var(--tg-theme-bg-color); /* 使用Telegram主题变量 */
-      }
-      .container {
-        text-align: center;
-      }
-      .hidden {
-        display: none;
-      }
-      .error {
-        color: #d32f2f;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="app-container" class="container">
-      <!-- 默认显示给普通浏览器的内容 -->
-      <div id="browser-view">
-        <h1 class="error">Error</h1>
-        <p>Please open this page in the Telegram app via the specified bot.</p>
-      </div>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding: 16px;
+            color: var(--tg-theme-text-color);
+            background-color: var(--tg-theme-bg-color);
+        }
 
-      <!-- 仅在Telegram环境中显示的内容 -->
-      <div id="telegram-view" class="hidden">
-        <h1>Welcome!</h1>
-        <p>Hello, <b id="user-name">User</b>!</p>
-        <!-- <p>Hello, <b id="user-name2">User</b>!</p> -->
-        <!-- <button id="close-button">关闭应用</button> -->
-      </div>
+        .container {
+            text-align: center;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error {
+            color: #d32f2f;
+        }
+
+        .success {
+            color: #2e7d32;
+        }
+
+        .message-button {
+            width: 100%;
+            max-width: 320px;
+            margin-top: 16px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            color: var(--tg-theme-button-text-color, #ffffff);
+            background-color: var(--tg-theme-button-color, #2481cc);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .message-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app-container" class="container">
+        <div id="browser-view">
+            <h1 class="error">Error</h1>
+            <p>Please open this page in the Telegram app via the specified bot.</p>
+        </div>
+
+        <div id="telegram-view" class="hidden">
+            <h1>Welcome!</h1>
+            <p>Telegram ID:<b id="user-name">User</b></p>
+            <p id="permission-status">Checking message permission...</p>
+            <button id="request-access" class="message-button hidden" type="button">
+                Request message access
+            </button>
+        </div>
     </div>
 
     <script>
-      // 确保页面加载完成后再执行
-      window.addEventListener("load", () => {
-        // 检查Telegram环境是否完全就绪
-        if (
-          window.Telegram &&
-          window.Telegram.WebApp &&
-          window.Telegram.WebApp.initData
-        ) {
-          // --- 只有在确认环境就绪后，才进行后续操作 ---
+        window.addEventListener("load", () => {
+            const telegramWebApp = window.Telegram?.WebApp;
 
-          const tg = window.Telegram.WebApp;
-          // 需要base 解码
-
-          // 切换UI视图
-          document.getElementById("telegram-view").classList.remove("hidden");
-          document.getElementById("browser-view").classList.add("hidden");
-
-          // 通知Telegram应用UI已就绪并展开窗口
-          tg.ready();
-          tg.expand();
-
-          // 安全地获取并显示用户信息
-          const user = tg.initDataUnsafe?.user;
-          if (user) {
-            document.getElementById("user-name").innerText = user.id || "朋友";
-
-            // 生成用户名，确保长度至少6位
-            let username = (user.first_name || "") + (user.last_name || "");
-
-            // 如果用户名长度少于6位，用随机数补齐
-            if (username.length < 6) {
-              const randomSuffix = Math.floor(Math.random() * 1000000)
-                .toString()
-                .padStart(6, "0");
-              username =
-                username + randomSuffix.substring(0, 6 - username.length);
+            if (!telegramWebApp || !telegramWebApp.initData) {
+                console.warn(
+                    "Telegram WebApp not found or not ready. Please open this page from Telegram."
+                );
+                return;
             }
-            if (tg.initDataUnsafe?.start_param) {
-              const sharedata = tg.initDataUnsafe?.start_param;
-              window.location.href = `https://agent.token-in.com/#/pages/index/tlogin?userId=${user.id}&username=${username}&sharedata=${sharedata}`;
-              // window.location.href = `https://azagent.agentspay.com/#/pages/index/tlogin?userId=${user.id}&username=${username}&sharedata=${sharedata}`;
-            } else {
-              window.location.href = `https://agent.token-in.com/#/pages/index/tlogin?userId=${user.id}&username=${username}`;
-              // window.location.href = `https://azagent.agentspay.com/#/pages/index/tlogin?userId=${user.id}&username=${username}`;
+
+            const tg = telegramWebApp;
+            const user = tg.initDataUnsafe?.user;
+            const browserView = document.getElementById("browser-view");
+            const telegramView = document.getElementById("telegram-view");
+            const userNameElement = document.getElementById("user-name");
+            const permissionStatus = document.getElementById("permission-status");
+            const requestAccessButton = document.getElementById("request-access");
+
+            browserView.classList.add("hidden");
+            telegramView.classList.remove("hidden");
+
+            tg.ready();
+            tg.expand();
+
+            if (!user) {
+                permissionStatus.innerText = "Unable to obtain Telegram user information.";
+                permissionStatus.classList.add("error");
+                return;
             }
-          }
-        } else {
-          console.warn(
-            "Telegram WebApp not found or not ready. Running in a standard browser or launch method is incorrect."
-          );
-        }
-      });
+
+            userNameElement.innerText = user.id || "Unknown";
+
+            function createUsername() {
+                let username = (user.first_name || "") + (user.last_name || "");
+
+                if (username.length < 6) {
+                    const randomSuffix = Math.floor(Math.random() * 1000000)
+                        .toString()
+                        .padStart(6, "0");
+
+                    username += randomSuffix.substring(0, 6 - username.length);
+                }
+
+                return username;
+            }
+
+            function redirectToBusinessPage() {
+                const username = createUsername();
+                const params = new URLSearchParams({
+                    userId: String(user.id),
+                    username
+                });
+                const startParam = tg.initDataUnsafe?.start_param;
+
+                if (startParam) {
+                    params.set("sharedata", startParam);
+                }
+
+                const targetUrl = "//https://agent.token-in.com/#/pages/index/tlogin?" + params.toString();
+
+                window.location.replace(targetUrl);
+            }
+
+            function handlePermissionGranted() {
+                permissionStatus.innerText = "Message access granted. Redirecting...";
+                permissionStatus.classList.remove("error");
+                permissionStatus.classList.add("success");
+                requestAccessButton.classList.add("hidden");
+                redirectToBusinessPage();
+            }
+
+            if (user.allows_write_to_pm) {
+                handlePermissionGranted();
+                return;
+            }
+
+            permissionStatus.innerText = "Please allow the Bot to send messages.";
+            requestAccessButton.classList.remove("hidden");
+
+            requestAccessButton.addEventListener("click", () => {
+                if (typeof tg.requestWriteAccess !== "function") {
+                    permissionStatus.innerText =
+                        "Your Telegram version does not support message permission requests.";
+                    permissionStatus.classList.add("error");
+                    return;
+                }
+
+                requestAccessButton.disabled = true;
+                permissionStatus.innerText = "Requesting message permission...";
+
+                tg.requestWriteAccess((allowed) => {
+                    requestAccessButton.disabled = false;
+
+                    if (allowed) {
+                        handlePermissionGranted();
+                        return;
+                    }
+
+                    permissionStatus.innerText = "Message permission was denied. Please allow access to continue.";
+                    permissionStatus.classList.add("error");
+                    requestAccessButton.innerText = "Request message access again";
+                });
+            });
+        });
     </script>
-  </body>
+</body>
+
 </html>
