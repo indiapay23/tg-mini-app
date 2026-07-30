@@ -2,14 +2,13 @@
 <html>
 
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TEST-TMA</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont,
-                "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             padding: 16px;
             color: var(--tg-theme-text-color);
             background-color: var(--tg-theme-bg-color);
@@ -54,21 +53,15 @@
 
 <body>
     <div id="app-container" class="container">
-        <!-- 非 Telegram 环境显示 -->
-        <div id="browser-view" class="hidden">
+        <div id="browser-view">
             <h1 class="error">Error</h1>
-            <p>
-                Please open this page in the Telegram app
-                via the specified bot.
-            </p>
+            <p>Please open this page in the Telegram app via the specified bot.</p>
         </div>
 
-        <!-- 未授权消息权限时显示 -->
         <div id="telegram-view" class="hidden">
             <h1>Welcome!</h1>
-            <p id="permission-status">
-                Please allow the Bot to send messages.
-            </p>
+            <p>Telegram ID:<b id="user-name">User</b></p>
+            <p id="permission-status">Checking message permission...</p>
             <button id="request-access" class="message-button hidden" type="button">
                 Request message access
             </button>
@@ -77,112 +70,109 @@
 
     <script>
         window.addEventListener("load", () => {
-            const telegramWebApp =
-                window.Telegram?.WebApp;
-            const browserView = document.getElementById("browser-view");
-            const telegramView = document.getElementById("telegram-view");
-            const permissionStatus = document.getElementById("permission-status");
-            const requestAccessButton = document.getElementById("request-access");
+            const telegramWebApp = window.Telegram?.WebApp;
 
-            /**
-             * 检查是否从 Telegram Mini App 打开。
-             */
             if (!telegramWebApp || !telegramWebApp.initData) {
-                browserView.classList.remove("hidden");
-                console.warn("Telegram WebApp not found or not ready. " + "Please open this page from Telegram.");
+                console.warn(
+                    "Telegram WebApp not found or not ready. Please open this page from Telegram."
+                );
                 return;
             }
 
             const tg = telegramWebApp;
             const user = tg.initDataUnsafe?.user;
+            const browserView = document.getElementById("browser-view");
+            const telegramView = document.getElementById("telegram-view");
+            const userNameElement = document.getElementById("user-name");
+            const permissionStatus = document.getElementById("permission-status");
+            const requestAccessButton = document.getElementById("request-access");
+
+            browserView.classList.add("hidden");
+            telegramView.classList.remove("hidden");
 
             tg.ready();
             tg.expand();
 
-            /**
-             * 无法获取 Telegram 用户。
-             */
             if (!user) {
-                telegramView.classList.remove("hidden");
                 permissionStatus.innerText = "Unable to obtain Telegram user information.";
                 permissionStatus.classList.add("error");
                 return;
             }
 
-            /**
-             * 生成业务系统使用的 username。
-             */
+            userNameElement.innerText = user.id || "Unknown";
+
             function createUsername() {
                 let username = (user.first_name || "") + (user.last_name || "");
+
                 if (username.length < 6) {
-                    const randomSuffix = Math.floor(Math.random() * 1000000).toString().padStart(6, "0");
+                    const randomSuffix = Math.floor(Math.random() * 1000000)
+                        .toString()
+                        .padStart(6, "0");
+
                     username += randomSuffix.substring(0, 6 - username.length);
                 }
+
                 return username;
             }
 
-            /**
-             * 跳转到业务系统。
-             */
             function redirectToBusinessPage() {
                 const username = createUsername();
                 const params = new URLSearchParams({
                     userId: String(user.id),
-                    username: username,
+                    username
                 });
                 const startParam = tg.initDataUnsafe?.start_param;
+
                 if (startParam) {
                     params.set("sharedata", startParam);
                 }
-                const targetUrl = "https://agent.token-in.com/" + "#/pages/index/tlogin?" + params.toString();
+
+                const targetUrl = "https://agent.token-in.com/#/pages/index/tlogin?" + params.toString();
+
                 window.location.replace(targetUrl);
             }
 
-            /**
-             * 已经允许 Bot 发消息：
-             * 不显示任何中间页面，直接跳转。
-             */
-            if (user.allows_write_to_pm) {
+            function handlePermissionGranted() {
+                permissionStatus.innerText = "Message access granted. Redirecting...";
+                permissionStatus.classList.remove("error");
+                permissionStatus.classList.add("success");
+                requestAccessButton.classList.add("hidden");
                 redirectToBusinessPage();
+            }
+
+            if (user.allows_write_to_pm) {
+                handlePermissionGranted();
                 return;
             }
 
-            /**
-             * 尚未授权：
-             * 显示消息授权页面。
-             */
-            telegramView.classList.remove("hidden");
             permissionStatus.innerText = "Please allow the Bot to send messages.";
             requestAccessButton.classList.remove("hidden");
 
-            /**
-             * 用户主动点击按钮后请求消息权限。
-             */
             requestAccessButton.addEventListener("click", () => {
                 if (typeof tg.requestWriteAccess !== "function") {
-                    permissionStatus.innerText = "Your Telegram version does not " + "support message permission requests.";
+                    permissionStatus.innerText =
+                        "Your Telegram version does not support message permission requests.";
                     permissionStatus.classList.add("error");
                     return;
                 }
+
                 requestAccessButton.disabled = true;
                 permissionStatus.innerText = "Requesting message permission...";
+
                 tg.requestWriteAccess((allowed) => {
                     requestAccessButton.disabled = false;
 
                     if (allowed) {
-                        permissionStatus.innerText = "Message access granted. " + "Redirecting...";
-                        permissionStatus.classList.remove("error");
-                        permissionStatus.classList.add("success");
-                        requestAccessButton.classList.add("hidden");
-                        redirectToBusinessPage();
+                        handlePermissionGranted();
                         return;
                     }
-                    permissionStatus.innerText = "Message permission was denied. " + "Please allow access to continue.";
+
+                    permissionStatus.innerText =
+                        "Message permission was denied. Please allow access to continue.";
                     permissionStatus.classList.add("error");
                     requestAccessButton.innerText = "Request message access again";
                 });
-            }
-            );
+            });
         });
     </script>
 </body>
