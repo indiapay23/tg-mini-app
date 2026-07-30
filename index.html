@@ -1,38 +1,39 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <title>正在跳转...</title>
+<pre id="user-info">Loading...</pre>
+<button id="request-access">Request message access</button>
 
-  <script>
-    const targetUrl =
-      'https://azagent.agentspay.com/test.html' +
-      window.location.search +
-      window.location.hash;
+<script>
+  const tg = window.Telegram.WebApp;
 
-    window.location.replace(targetUrl);
-  </script>
-</head>
+  tg.ready();
+  tg.expand();
 
-<body>
-  <p>正在打开 Mini App...</p>
+  const user = tg.initDataUnsafe.user;
 
-  <p>
-    <a id="manual-link" href="https://azagent.agentspay.com/test.html">
-      点击这里继续
-    </a>
-  </p>
+  document.getElementById("user-info").textContent =
+    JSON.stringify(
+      {
+        initDataExists: Boolean(tg.initData),
+        id: user?.id,
+        username: user?.username,
+        firstName: user?.first_name,
+        lastName: user?.last_name,
+        allowsWriteToPm: user?.allows_write_to_pm ?? false,
+      },
+      null,
+      2
+    );
 
-  <script>
-    document.getElementById('manual-link').href =
-      'https://azagent.agentspay.com/test.html' +
-      window.location.search +
-      window.location.hash;
-  </script>
-</body>
-</html>
+  document
+    .getElementById("request-access")
+    .addEventListener("click", () => {
+      tg.requestWriteAccess((allowed) => {
+        alert(
+          allowed
+            ? "Bot messaging permission granted"
+            : "Bot messaging permission denied"
+        );
+      });
+    });
+</script>
